@@ -1,0 +1,22 @@
+{
+  "name": "loup-gabot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ObscureAngel/loup-gabot.git"
+  },
+  "author": "Maxime BEACCO",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ObscureAngel/loup-gabot/issues"
+  },
+  "homepage": "https://github.com/ObscureAngel/loup-gabot#readme",
+  "dependencies": {
+    "discord.js": "^11.5.1"
+  }
+}
