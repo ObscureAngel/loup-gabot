@@ -51,14 +51,14 @@ const ls_prefix = "lg/"
 
 // Version du bot
 const ls_version = "1.0";
-const li_numeroVersion = 1;
+const li_numeroVersion = 2;
 
 // Activation du mode DEBUG
 var lb_debugMode = true;
 
 // Aide pour le bot
 var ls_helpText = "```Liste des commandes\n";
-ls_helpText += " - " + ls_prefix + "help  Affiche ce message d'aide\n";
+ls_helpText += " - " + ls_prefix + "aide  Affiche ce message d'aide\n";
 ls_helpText += " - " + ls_prefix + "version  Affiche les informations de version du bot\n";
 ls_helpText += " - " + ls_prefix + "debug  Active ou désactive le mode débug.\n";
 ls_helpText += "   Syntaxe : " + ls_prefix + "debug true|false";
@@ -76,13 +76,17 @@ lo_bot.on('ready', () => {
     // Placer en dessous la création et les changements de structure de la base
     fa_structureBaseOrigine = [
         "CREATE TABLE lg_carte (bi_idCarte INT PRIMARY KEY AUTO_INCREMENT, bs_nomCarte TEXT, bs_descriptionCarte TEXT, bi_clefRole INT)",
-        "CREATE TABLE lg_role (bi_idRole INT PRIMARY KEY AUTO_INCREMENT, bs_nomRole TEXT, bs_descriptionRole TEXT, bi_snowflakeRole TEXT)",
+        "CREATE TABLE lg_role (bi_idRole INT PRIMARY KEY AUTO_INCREMENT, bs_nomRole TEXT, bs_descriptionRole TEXT, bs_snowflakeRole TEXT)",
+        "CREATE TABLE lg_canal (bi_idCanal INT PRIMARY KEY AUTO_INCREMENT, bs_nomCanal TEXT, bs_typeCanal TEXT, bs_snowflakeCanal TEXT, bs_snowflakeServeur TEXT)",
         "CREATE TABLE lg_version (bi_numeroVersion INT)",
         "INSERT INTO lg_version VALUES (" + li_numeroVersion + ")"
     ];
 
     fa_structureBaseChangement = [
-        "UPDATE lg_version SET bi_numeroVersion = " + li_numeroVersion
+        "UPDATE lg_version SET bi_numeroVersion = " + li_numeroVersion,
+        "ALTER TABLE lg_role CHANGE bi_snowflakeRole bs_snowflakeRole TEXT",
+        "CREATE TABLE lg_canal (bi_idCanal INT PRIMARY KEY AUTO_INCREMENT, bs_nomCanal TEXT, bs_typeCanal TEXT, bs_snowflakeCanal TEXT, bs_snowflakeServeur TEXT)"
+
     ];
     
     lo_connexionLoupGabot.query("SELECT bi_numeroVersion FROM lg_version", function (lo_erreur, lo_ligne) {
@@ -118,10 +122,14 @@ lo_bot.on('message', po_message => {
     if (po_message.author.bot) return;
 
     if (po_message.content === 'test') {
-        
+        po_message.guild.channels.forEach(channel => {
+            if (channel.type == 'voice') {
+                po_message.reply(channel.name);
+            }
+        });
     }
 
-    // Récupération de la commande et du préfixe
+    // Récupération de la commande
     if (po_message.content.startsWith(ls_prefix)) {
         fs_commande = po_message.content.replace(ls_prefix, '');
         fa_commandePrefixe = fs_commande.split(' ', 1);
@@ -176,7 +184,37 @@ lo_bot.on('message', po_message => {
                 po_message.channel.send('Maître du jeu supprimé !');
             }
             break;
+        
+        case 'ajouterCanalVocal':
+            fs_commandeAjouterCanal = fs_commande.split('ajouterCanalVocal')[1].trim();
+            fs_commandeAjouterCanalContenu = fs_commandeAjouterCanal.split('--');
+            fs_nomCanal = fs_commandeAjouterCanalContenu[1].split('canal:')[1].trim();
+
+            // recherche du canal correspondant au nom, utiliser variable globale
     
+        case 'ajouterCanalText':
+            fs_commandeAjouterCanal = fs_commande.split('ajouterCanalText')[1].trim();
+            fs_commandeAjouterCanalContenu = fs_commandeAjouterCanal.split('--');
+            fs_nomCanal = fs_commandeAjouterCanalContenu[1].split('canal:')[1].trim();
+            fs_typeCanal = fs_commandeAjouterCanalContenu[2].split('type:')[1].trim();
+            fa_typeCanal = [
+                'village',
+                'loup'
+            ];
+
+            if (fa_typeCanal.indexOf(fs_typeCanal) >= 0) {
+                fct_enregistrerCanal()
+                    .then(function (po_reponse) {
+                        if (po_reponse) {
+                            po_message.channel.send('Canal ajouté !');
+                        }
+                        else {
+                            po_message.channel.send('Une erreur est survenue, le canal n\'a pas été ajouté...');
+                        }
+                    });
+            }
+            break;
+
         default:
             po_message.reply(
                 'Mauvaise commande ! Essaye lg/aide pour voir l\'aide'
@@ -185,14 +223,14 @@ lo_bot.on('message', po_message => {
     }
 });
 
-function fct_envoyerMessageCarte(po_user, po_carte) {
+function fct_envoyerMessageCarte (po_user, po_carte) {
     po_user.send(po_carte.ls_nomCarte)
         .then(
             lo_gameMaster.send('Carte ' + po_carte.ls_nomCarte + ' envoyée à ' + po_user.username)
         );
 }
 
-function fct_enregistrerNouvelleCarte(ps_nomCarte, ps_descriptionCarte) {
+function fct_enregistrerNouvelleCarte (ps_nomCarte, ps_descriptionCarte) {
     ps_nomCarte = ps_nomCarte.toUpperCase();
     
     return new Promise(function (resolve, reject) {
@@ -220,7 +258,7 @@ function fct_enregistrerNouvelleCarte(ps_nomCarte, ps_descriptionCarte) {
     });
 }
 
-function fct_isPresenteCarte(ps_nomCarte) {
+function fct_isPresenteCarte (ps_nomCarte) {
     return new Promise(function (resolve, reject) {
         fs_req = 'SELECT bi_idCarte FROM lg_carte WHERE bs_nomCarte LIKE ?';
         fa_parametre = [ps_nomCarte];
@@ -234,5 +272,11 @@ function fct_isPresenteCarte(ps_nomCarte) {
                 resolve(true);
             }
         });
+    });
+}
+
+function fct_enregistrerCanal (ps_nomCanal, ps_typeCanal, po_serveur) {
+    return new Promise(function (resolve, reject) {
+
     });
 }
