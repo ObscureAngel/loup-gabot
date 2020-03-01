@@ -85,7 +85,8 @@ lo_bot.on('ready', () => {
     fa_structureBaseChangement = [
         "UPDATE lg_version SET bi_numeroVersion = " + li_numeroVersion,
         "ALTER TABLE lg_role CHANGE bi_snowflakeRole bs_snowflakeRole TEXT",
-        "CREATE TABLE lg_canal (bi_idCanal INT PRIMARY KEY AUTO_INCREMENT, bs_nomCanal TEXT, bs_typeCanal TEXT, bs_snowflakeCanal TEXT, bs_snowflakeServeur TEXT)"
+        "CREATE TABLE lg_canal (bi_idCanal INT PRIMARY KEY AUTO_INCREMENT, bs_nomCanal TEXT, bs_typeCanal TEXT, bs_snowflakeCanal TEXT, bs_snowflakeServeur TEXT)",
+        "ALTER TABLE lg_carte ADD bb_isDistribuable TINYINT(1) DEFAULT 1"
 
     ];
     
@@ -122,11 +123,19 @@ lo_bot.on('message', po_message => {
     if (po_message.author.bot) return;
 
     if (po_message.content === 'test') {
-        po_message.guild.channels.forEach(channel => {
-            if (channel.type == 'voice') {
-                po_message.reply(channel.name);
-            }
-        });
+        fct_getCarteAJouer_a()
+            .then(function (po_reponse) {
+                if (po_reponse) {
+                    po_reponse.forEach(po_carte => {
+                        po_message.author.send(po_carte.ls_nomCarte + " : " + po_carte.ls_descriptionCarte);
+                    });
+                }
+            })
+            .catch(function (po_rejection) {
+                if (po_rejection) {
+                    console.log(po_rejection);
+                }
+            });
     }
 
     // Récupération de la commande
@@ -145,14 +154,37 @@ lo_bot.on('message', po_message => {
             );
             break;
         case 'distribuerCartes':
-            po_message.channel.members.forEach(fo_member => {
-                if (!fo_member.user.bot) {
-                    fct_envoyerMessageCarte(fo_member.user, po_carte);
-                }
-            });
-            po_message.channel.send(
-                'Toutes les cartes ont été envoyées'
-            );
+            if (po_message.author == lo_gameMaster) {
+                fa_membres = po_message.channel.members;
+                fct_getCarteAJouer_a()
+                    .then(function(po_reponse) {
+                        if(po_reponse) {
+                            po_reponse = fct_shuffle(po_reponse);
+                            fi_compteur = 0;
+                            fa_membres.forEach(fo_member => {
+                                if (!fo_member.user.bot) {
+                                    po_carte = po_reponse[fi_compteur];
+                                    fct_envoyerMessageCarte(fo_member.user, po_carte);
+                                    fi_compteur++;
+                                }
+                            });
+                            lo_gameMaster.send(
+                                'Toutes les cartes ont été envoyées'
+                            );
+                        }
+                    })
+                    .catch(function(po_rejection) {
+                        if(po_rejection) {
+                            po_message.channel.send('Une erreur est survenue.');
+                            console.log(po_rejection);
+                            
+                        }
+                    });
+                
+            }
+            else {
+                po_message.reply('Le maître du jeu n\'est pas défini, vous ne pouvez pas lancer de partie.');
+            }
             break;
         
         case 'ajouterCarte':
@@ -173,12 +205,12 @@ lo_bot.on('message', po_message => {
                 });
             break;
 
-        case 'ajouterGameMaster':
+        case 'ajouterMaitre':
             if (lo_gameMaster == null) lo_gameMaster = po_message.author;
             po_message.channel.send('Maître du jeu ajouté !');
             break;
 
-        case 'supprimerGameMaster':
+        case 'supprimerMaitre':
             if (po_message.author == lo_gameMaster) {
                 lo_gameMaster = null;
                 po_message.channel.send('Maître du jeu supprimé !');
@@ -189,6 +221,7 @@ lo_bot.on('message', po_message => {
             fs_commandeAjouterCanal = fs_commande.split('ajouterCanalVocal')[1].trim();
             fs_commandeAjouterCanalContenu = fs_commandeAjouterCanal.split('--');
             fs_nomCanal = fs_commandeAjouterCanalContenu[1].split('canal:')[1].trim();
+            console.log(po_message.guild.channels.find(fo_guildChannel => fo_guildChannel.name = fs_nomCanal));
 
             // recherche du canal correspondant au nom, utiliser variable globale
     
@@ -280,3 +313,47 @@ function fct_enregistrerCanal (ps_nomCanal, ps_typeCanal, po_serveur) {
 
     });
 }
+
+function fct_getCarteAJouer_a () {
+    return new Promise(function (resolve, reject) {
+        fs_req = 'SELECT * FROM lg_carte WHERE bb_isDistribuable = 1';
+        var fa_carte = [];
+
+        fo_req = lo_connexionLoupGabot.query(fs_req, function (po_erreur, po_resultat) {
+            if (po_resultat[0] == undefined) {
+                resolve('Aucune carte n\'a été trouvé');
+            }
+            else {
+                fi_compteur = 0;
+                po_resultat.forEach(po_ligne => {
+                    fa_carte[fi_compteur] = {
+                        ls_nomCarte: po_ligne['bs_nomCarte'],
+                        ls_descriptionCarte: po_ligne['bs_descriptionCarte']
+                    };
+                    fi_compteur++;
+                });
+                
+                resolve(fa_carte);
+            }
+        });
+    });
+}
+
+function fct_shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+  
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+  
+      // Pick a remaining element...
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex -= 1;
+  
+      // And swap it with the current element.
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+  
+    return array;
+  }
