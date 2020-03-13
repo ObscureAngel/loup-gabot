@@ -18,6 +18,7 @@
   "homepage": "https://github.com/ObscureAngel/loup-gabot#readme",
   "dependencies": {
     "discord.js": "^11.5.1",
+    "discord.js-commando": "^0.10.0",
     "mysql": "github:felixge/node-mysql",
     "node-dev": "^4.0.0"
   }

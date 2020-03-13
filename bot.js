@@ -1,8 +1,9 @@
 // Import
-var lo_Discord = require('discord.js');
-var lo_fs = require('fs');
-var lo_path = require('path');
-var lo_mysql = require('mysql');
+const lo_discord = require('discord.js');
+//const lo_commando = require('discord.js-commando');
+const lo_fs = require('fs');
+const lo_path = require('path');
+const lo_mysql = require('mysql');
 
 // Reprise du token
 var ls_token = fct_getToken('token.txt');
@@ -12,8 +13,9 @@ function fct_getToken(relPath) {
 }
 
 // Création d'une instance d'un client Discord
-var lo_bot = new lo_Discord.Client({autoReconnect: true});
+var lo_bot = new lo_discord.Client({autoReconnect: true});
 
+//var lo_commandeClient = new lo_commando.Client({owner: '341645728260685824'});
 // Création d'une connexion à la bdd
 var lo_connexionLoupGabot = lo_mysql.createConnection({
     host : "localhost",
@@ -155,14 +157,17 @@ lo_bot.on('message', po_message => {
             break;
         case 'distribuerCartes':
             if (po_message.author == lo_gameMaster) {
+
+                fct_chargerCanalVocal();
                 fa_membres = po_message.channel.members;
+
                 fct_getCarteAJouer_a()
                     .then(function(po_reponse) {
                         if(po_reponse) {
                             po_reponse = fct_shuffle(po_reponse);
-                            fi_compteur = 0;
+                            var fi_compteur = 0;
                             fa_membres.forEach(fo_member => {
-                                if (!fo_member.user.bot) {
+                                if (!fo_member.user.bot && fo_member.user != lo_gameMaster) {
                                     po_carte = po_reponse[fi_compteur];
                                     fct_envoyerMessageCarte(fo_member.user, po_carte);
                                     fi_compteur++;
@@ -257,7 +262,7 @@ lo_bot.on('message', po_message => {
 });
 
 function fct_envoyerMessageCarte (po_user, po_carte) {
-    po_user.send(po_carte.ls_nomCarte)
+    po_user.send('Tu as eu la carte ' + po_carte.ls_nomCarte + ' ! ' + po_carte.ls_descriptionCarte)
         .then(
             lo_gameMaster.send('Carte ' + po_carte.ls_nomCarte + ' envoyée à ' + po_user.username)
         );
@@ -328,7 +333,7 @@ function fct_getCarteAJouer_a () {
                 po_resultat.forEach(po_ligne => {
                     fa_carte[fi_compteur] = {
                         ls_nomCarte: po_ligne['bs_nomCarte'],
-                        ls_descriptionCarte: po_ligne['bs_descriptionCarte']
+                        ls_descriptionCarte: po_ligne['bs_descriptionCarte'] 
                     };
                     fi_compteur++;
                 });
@@ -356,4 +361,8 @@ function fct_shuffle(array) {
     }
   
     return array;
-  }
+}
+
+function fct_chargerCanalVocal(fo_serveur) {
+
+}
